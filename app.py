@@ -11,6 +11,28 @@ from langgraph.checkpoint.postgres import PostgresSaver
 
 load_dotenv()
 
+
+def load_streamlit_secrets_into_environment():
+    """Copy Streamlit Cloud secrets into environment variables once at startup."""
+    required_keys = [
+        "GROQ_API_KEY",
+        "OPENWEATHER_API_KEY",
+        "SUPABASE_DB_URI",
+    ]
+
+    for key in required_keys:
+        try:
+            value = st.secrets.get(key)
+
+            if value:
+                os.environ[key] = str(value)
+        except Exception:
+            # Local development uses values loaded from .env.
+            pass
+
+
+load_streamlit_secrets_into_environment()
+
 st.set_page_config(
     page_title="Weather Assistant",
     page_icon="☀️",
@@ -33,45 +55,18 @@ YOUR WORKFLOW:
 
 
 def get_secret(name: str) -> str | None:
-    """Read a value from Streamlit secrets, with .env support for local testing."""
-    try:
-        # Preferred format: a top-level Streamlit secret, for example:
-        # GROQ_API_KEY = "..."
-        value = st.secrets.get(name)
-        if value:
-            return str(value).strip()
-
-        # Also support secrets pasted under [secrets] or [general].
-        # Top-level secrets remain the recommended format.
-        for section_name in ("secrets", "general"):
-            section = st.secrets.get(section_name, {})
-            if hasattr(section, "get"):
-                value = section.get(name)
-                if value:
-                    return str(value).strip()
-    except Exception:
-        # If Streamlit secrets are unavailable locally, use .env/environment
-        # variables instead.
-        pass
-
+    """Read a value loaded from .env or Streamlit Cloud secrets."""
     value = os.getenv(name)
     return value.strip() if value else None
 
 
 def require_secret(name: str) -> str:
     value = get_secret(name)
-    if not value:
-        detected_names = []
-        try:
-            detected_names = [str(key) for key in st.secrets.keys()]
-        except Exception:
-            pass
 
-        detected = ", ".join(detected_names) or "none"
+    if not value:
         raise RuntimeError(
-            f"Missing {name}. Streamlit detected these top-level secret names: "
-            f"{detected}. Add the key to Streamlit Community Cloud app Secrets "
-            "using the exact name and save the settings."
+            f"Missing {name}. Add it to .env locally or to Streamlit "
+            "Community Cloud app Secrets."
         )
     return value
 
