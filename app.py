@@ -35,21 +35,43 @@ YOUR WORKFLOW:
 def get_secret(name: str) -> str | None:
     """Read a value from Streamlit secrets, with .env support for local testing."""
     try:
-        value = st.secrets[name]
+        # Preferred format: a top-level Streamlit secret, for example:
+        # GROQ_API_KEY = "..."
+        value = st.secrets.get(name)
         if value:
-            return str(value)
-    except (KeyError, FileNotFoundError):
+            return str(value).strip()
+
+        # Also support secrets pasted under [secrets] or [general].
+        # Top-level secrets remain the recommended format.
+        for section_name in ("secrets", "general"):
+            section = st.secrets.get(section_name, {})
+            if hasattr(section, "get"):
+                value = section.get(name)
+                if value:
+                    return str(value).strip()
+    except Exception:
+        # If Streamlit secrets are unavailable locally, use .env/environment
+        # variables instead.
         pass
 
-    return os.getenv(name)
+    value = os.getenv(name)
+    return value.strip() if value else None
 
 
 def require_secret(name: str) -> str:
     value = get_secret(name)
     if not value:
+        detected_names = []
+        try:
+            detected_names = [str(key) for key in st.secrets.keys()]
+        except Exception:
+            pass
+
+        detected = ", ".join(detected_names) or "none"
         raise RuntimeError(
-            f"Missing {name}. Add it to .streamlit/secrets.toml locally "
-            "or to Streamlit Community Cloud app Secrets."
+            f"Missing {name}. Streamlit detected these top-level secret names: "
+            f"{detected}. Add the key to Streamlit Community Cloud app Secrets "
+            "using the exact name and save the settings."
         )
     return value
 
