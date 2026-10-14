@@ -1,6 +1,6 @@
 # 🌦️ Weather Agent
 
-**Live app:** [Open Weather Agent](https://weather-agent-2-mi7773.streamlit.app/)
+**Live app:** [weather-agent-4.0](https://weather-agent-4-mi7773.streamlit.app/)
 
 AI weather assistant built with **LangChain, LangGraph, Groq, OpenWeatherMap, Supabase, and Streamlit**.
 
